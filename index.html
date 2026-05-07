@@ -1,0 +1,20 @@
+
+<html>
+<body>
+
+    <h1>Esquema Númerico de Crank-Nicolson para o problema misto da equação paraxial</h1>
+    <p>Dominio: Ω = {(x,z) | x ∈ [0,3000], z ∈ [0,500]} </p>
+
+    <p> a equação: iu<sub>xx</sub> + bu<sub>zz</sub> + Vu =0</p>
+    <p>os coeficientes:</p>
+    <p> Vvec = exp(-(z-250).^2/30000);</p>
+    <p> u0 = exp(1i*z/4) .* exp(-(z-250).^2/1500);</p>
+
+    <div id="status">Iniciando...</div>
+    <canvas id="acusticSound" style="background: #000;"></canvas>
+	<script src="onda.js"></script>
+
+</body>
+</html>
+
+	
