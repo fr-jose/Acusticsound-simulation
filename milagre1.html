@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulação Temporal: Fontes Acústicas</title>
+    <style>
+        body { margin: 0; background: #000d1a; color: white; font-family: sans-serif; overflow: hidden; }
+        canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
+        .ui { position: absolute; top: 15px; left: 15px; background: rgba(0,20,40,0.8); padding: 15px; border-radius: 8px; border: 1px solid #005580; }
+        .controls { margin-top: 10px; }
+        button { background: #0088cc; color: white; border: none; padding: 8px 12px; cursor: pointer; border-radius: 4px; margin-right: 5px; }
+        button:hover { background: #00aaff; }
+        #status { color: #00ffcc; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="ui">
+        <b>Propagação Temporal (Grade Reduzida)</b><br>
+        <div class="controls">
+            <button onclick="setSource('gaussian')">Gaussian</button>
+            <button onclick="setSource('green')">Green</button>
+            <button onclick="setSource('thomson')">Thomson</button>
+        </div>
+        <p>Fonte: <span id="sourceName">Gaussian</span></p>
+
+        <div id="status">Calculando fatias temporais...</div>
+
+        <label>Índice do Meio (n²): <b id="nVal">15.0</b></label>
+        <input type="range" id="nSlider" min="0.5" max="50.0" step="0.05" value="1.0" oninput="updateN(this.value)">
+    
+    </div>
+    <canvas id="canvas"></canvas>
+
+<script>
+    
+/* IMPLEMENTAÇÃO: HELMHOLTZ PE COM VARIAÇÃO DE FASE TEMPORAL
+ * Utiliza a estratégia de grade reduzida para performance.
+ */
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// --- PARÂMETROS DA GRADE (REDUZIDA) ---
+const NX = 300; 
+const NZ = 150;
+const dx = 5; 
+const dz = 3;
+const k0 = (2 * Math.PI * 100) / 1500;
+
+let n_lens_sq = 10;
+
+let currentSource = 'gaussian';
+let timeFrames = []; // Armazenará as soluções para diferentes fases
+const totalFrames = 20; // Quantidade de quadros para o ciclo de onda
+
+const C = {
+    add: (a, b) => ({ re: a.re + b.re, im: a.im + b.im }),
+    sub: (a, b) => ({ re: a.re - b.re, im: a.im - b.im }),
+    mul: (a, b) => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re }),
+    div: (a, b) => {
+        const den = b.re * b.re + b.im * b.im;
+        return { re: (a.re * b.re + a.im * b.im) / den, im: (a.im * b.re - a.re * b.im) / den };
+    },
+    mag: (a) => Math.sqrt(a.re * a.re + a.im * a.im)
+};
+
+function updateN(val) {
+    n_lens_sq = parseFloat(val);
+    document.getElementById('nVal').innerText = val;
+    document.getElementById('status').innerText = "Recalculando...";
+    // Delay para não sobrecarregar o CPU enquanto arrasta
+    clearTimeout(window.recalcTimeout);
+    window.recalcTimeout = setTimeout(calculatePhysics, 50);
+}
+
+function solveThomas(a, b, c, d) {
+    const n = d.length;
+    const cp = new Array(n), dp = new Array(n), x = new Array(n);
+    cp[0] = C.div(c[0], b[0]);
+    dp[0] = C.div(d[0], b[0]);
+    for (let i = 1; i < n; i++) {
+        let den = C.sub(b[i], C.mul(a[i], cp[i - 1]));
+        cp[i] = C.div(c[i], den);
+        dp[i] = C.div(C.sub(d[i], C.mul(a[i], dp[i - 1])), den);
+    }
+    x[n - 1] = dp[n - 1];
+    for (let i = n - 2; i >= 0; i--) x[i] = C.sub(dp[i], C.mul(cp[i], x[i + 1]));
+    return x;
+}
+
+function calculatePhysics() {
+    timeFrames = [];
+    const z_src = (NZ * dz) / 2;
+
+    for (let t = 0; t < totalFrames; t++) {
+        const phaseShift = (t / totalFrames) * Math.PI * 2;
+        let u = new Array(NZ);
+
+        // Inicializa a fonte conforme o tipo e a fase
+        for (let i = 0; i < NZ; i++) {
+            const dist = (i * dz) - z_src;
+            let amp = 0;
+            if (currentSource === 'gaussian') amp = Math.exp(-(k0 * k0 * dist * dist) / 2);
+            else if (currentSource === 'green') amp = Math.cos(k0 * Math.abs(dist)) / (1 + k0 * Math.abs(dist));
+            else if (currentSource === 'thomson') amp = Math.exp(-dist * dist / 800) * Math.cos(k0 * dist * 0.2);
+            
+            u[i] = { re: amp * Math.cos(phaseShift), im: amp * Math.sin(phaseShift) };
+        }
+
+        let frameResult = [];
+        for (let m = 0; m < NX; m++) {
+            const r = m * dx;
+            const mags = new Float32Array(NZ);
+            // Armazenamos a parte Real (pressão instantânea) para ver a oscilação
+            for(let i=0; i<NZ; i++) mags[i] = u[i].re; 
+            frameResult.push(mags);
+
+            const a = new Array(NZ).fill({ re: 1, im: 0 });
+            const c = new Array(NZ).fill({ re: 1, im: 0 });
+            const b = new Array(NZ);
+            const d = new Array(NZ);
+            const sigma = (k0 * dz * dz) / dx;
+
+            for (let i = 0; i < NZ; i++) {
+                const z = i * dz;
+                let n_sq = n_lens_sq;
+                // Lente Acústica
+                const distLens = Math.pow(r - 500, 2)/15000 + Math.pow(z - z_src, 2)/7000;
+                if (distLens < 1) n_sq = 1.45;
+
+                b[i] = { re: (k0*k0*dz*dz/2)*(n_sq-1) - 2, im: sigma };
+                let rhs = C.mul({ re: -((k0*k0*dz*dz/2)*(n_sq-1) - 2), im: sigma }, u[i]);
+                if (i > 0) rhs = C.sub(rhs, u[i-1]);
+                if (i < NZ - 1) rhs = C.sub(rhs, u[i+1]);
+                d[i] = rhs;
+            }
+            b[0] = { re: 1, im: 0 }; d[0] = { re: 0, im: 0 };
+            b[NZ-1] = { re: 1, im: 0 }; d[NZ-1] = { re: 0, im: 0 };
+            u = solveThomas(a, b, c, d);
+        }
+        timeFrames.push(frameResult);
+    }
+    document.getElementById('status').innerText = "Simulação Pronta!";
+}
+
+let animFrame = 0;
+function draw() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctx.fillStyle = '#000d1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const stepX = canvas.width / NX;
+    const stepY = canvas.height / NZ;
+    const currentData = timeFrames[animFrame % totalFrames];
+
+    for (let x = 0; x < NX; x++) {
+        for (let z = 0; z < NZ; z++) {
+            const val = currentData[x][z] * 255;
+            if (Math.abs(val) > 2) {
+                // Azul para pressão negativa, Ciano/Branco para positiva
+                if (val > 0) ctx.fillStyle = `rgb(${val*30}, ${val}, 255)`;
+                else ctx.fillStyle = `rgb(0, 0, ${Math.abs(val)*1})`;
+                ctx.fillRect(x * stepX, z * stepY, stepX + 1, stepY + 1);
+            }
+        }
+    }
+
+
+
+    // Contorno da Lente (Amarelo)
+    ctx.strokeStyle = '#ffff00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(500 * (canvas.width/(NX*dx)), (NZ*dz/2)*(canvas.height/(NZ*dz)), 
+                25 * stepX, 28 * stepY, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    animFrame++;
+    requestAnimationFrame(draw);
+}
+
+function setSource(type) {
+    currentSource = type;
+    document.getElementById('sourceName').innerText = type.charAt(0).toUpperCase() + type.slice(1);
+    document.getElementById('status').innerText = "Recalculando...";
+    setTimeout(() => {
+        calculatePhysics();
+    }, 50);
+}
+
+calculatePhysics();
+draw();
+</script>
+</body>
+</html>
