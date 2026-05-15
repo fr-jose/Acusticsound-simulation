@@ -424,54 +424,6 @@
 <p>
     Além disso, a condição que determina o feixe lançado inicialmente pode funcionar com modelos distintos. Usaremos 3 fontes: Gaussiana, Greene e Gaussiana Generalizada. Para detalhes da derivação de cada, veja [2]
 </p>
-
-    <!-- Simulação 1 -->
-    <div class="svg-expandido"><object id="transformations1" data="transformations1.svg" type="image/svg+xml"> </object></div>
-    
-<p>
-    Por fim, também fizemos uma simulação de Divisão de Feixe, dado em 6.9.1.1 em [2]. 
-    <p style="text-align: center"><img src="image.png" width="80%" height="80%">
-        Simulação de feixe inclinado [2] 
-    </p>
-    Nesse modelo, a velocidade do som aumenta com a profundidade, logo temos a tendência a subir. No modelo, o feixe aponta aproximadamente 5.28\( ^o \) para baixo, que é o ângulo mínimo para a a luz tocar o fundo.
-    Alguns parametros podem ser ajustas na simulação abaixo.
-</p>
-
-    <h2>Simulação PE-IFD: Beam Splitting</h2>
-   
-    <div class="controls">
-        <div class="section-title">Fonte Acústica</div>
-        <div class="control-group">
-            <label>Frequência (Hz):</label> <input type="number" id="s1_f" value="100" step="10">
-            <label>Prof. zs (m):</label> <input type="number" id="s1_zs" value="-400" step="10" oninput="atualizarPosicaoBolinha()">
-            <label>Inclinação θ (°):</label> <input type="number" id="s1_theta" value="5.28" step="0.1">
-            <label>Largura W (m):</label> <input type="number" id="s1_W" value="100" step="10">
-        </div>
-
-        <div class="section-title">Ambiente (Sedimento)</div>
-        <div class="control-group">
-            <label>Velocidade (m/s):</label> <input type="number" id="s1_c_sed" value="1655" step="5">
-            <label>Densidade (kg/m³):</label> <input type="number" id="s1_rho_sed" value="1500" step="50">
-        </div>
-       
-        <button id="btn-simular" class="simular-btn" onclick="iniciarSimulacao1()">Sempre que mudar valores no painel, mova a bolinha para visualizar a simulação</button>
-    </div>
-
-    <div class="canvas-wrapper">
-        <div class="y-label">Profundidade (m)<br>-800 a 200</div>
-       
-        <div id="source-dot1" title="Arraste para mudar a profundidade da fonte"></div>
-       
-        <canvas id="simCanvas1" width="800" height="400"></canvas>
-        <div class="x-label">Alcance Range (km) <br>0 a 10 km</div>
-    </div>
-   
-    <div id="status-bar">
-        <span id="status-text">Aguardando...</span>
-        <div id="progress-bar"><div id="progress-fill"></div></div>
-    </div>
-
-    <!-- Simulação 2 --> 
  <h2>Simulação PE: Propagação Acústica</h2>
    
     <div class="controls">
@@ -540,6 +492,55 @@
     </div>
    
     <div id="status">Pronto para simular.</div>
+
+    <!-- Simulação 1 -->
+    <div class="svg-expandido"><object id="transformations1" data="transformations1.svg" type="image/svg+xml"> </object></div>
+    
+<p>
+    Por fim, também fizemos uma simulação de Divisão de Feixe, dado em 6.9.1.1 em [2]. 
+    <p style="text-align: center"><img src="image.png" width="80%" height="80%">
+        Simulação de feixe inclinado [2] 
+    </p>
+    Nesse modelo, a velocidade do som aumenta com a profundidade, logo temos a tendência a subir. No modelo, o feixe aponta aproximadamente 5.28\( ^o \) para baixo, que é o ângulo mínimo para a a luz tocar o fundo.
+    Alguns parametros podem ser ajustas na simulação abaixo.
+</p>
+
+    <h2>Simulação PE-IFD: Beam Splitting</h2>
+   
+    <div class="controls">
+        <div class="section-title">Fonte Acústica</div>
+        <div class="control-group">
+            <label>Frequência (Hz):</label> <input type="number" id="s1_f" value="100" step="10">
+            <label>Prof. zs (m):</label> <input type="number" id="s1_zs" value="-400" step="10" oninput="atualizarPosicaoBolinha()">
+            <label>Inclinação θ (°):</label> <input type="number" id="s1_theta" value="5.28" step="0.1">
+            <label>Largura W (m):</label> <input type="number" id="s1_W" value="100" step="10">
+        </div>
+
+        <div class="section-title">Ambiente (Sedimento)</div>
+        <div class="control-group">
+            <label>Velocidade (m/s):</label> <input type="number" id="s1_c_sed" value="1655" step="5">
+            <label>Densidade (kg/m³):</label> <input type="number" id="s1_rho_sed" value="1500" step="50">
+        </div>
+       
+        <button id="btn-simular" class="simular-btn" onclick="iniciarSimulacao1()">Sempre que mudar valores no painel, mova a bolinha para visualizar a simulação</button>
+    </div>
+
+    <div class="canvas-wrapper">
+        <div class="y-label">Profundidade (m)<br>-800 a 200</div>
+       
+        <div id="source-dot1" title="Arraste para mudar a profundidade da fonte"></div>
+       
+        <canvas id="simCanvas1" width="800" height="400"></canvas>
+        <div class="x-label">Alcance Range (km) <br>0 a 10 km</div>
+    </div>
+   
+    <div id="status-bar">
+        <span id="status-text">Aguardando...</span>
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+    </div>
+
+    <!-- Simulação 2 --> 
+
 
 
     <h2>Autores</h1>
