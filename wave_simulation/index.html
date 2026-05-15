@@ -410,20 +410,22 @@
 </p>
 
 <p>
-    Dessa forma, o problema se reduz à resolução iterativa de um sistema matricial tridiagonal da forma
+    Dessa forma, o problema reduz-se à resolução iterativa de um sistema matricial tridiagonal da forma:
     $$
     A\psi^{m+1} = B\psi^m.
     $$
-    Em cada passo da propagação, resolvemos o sistema para obter \(\psi^{m+1}\), usando os valores de \(\psi^m\) conhecidos na posição anterior.
+    Nesta formulação, o campo de pressão na etapa subsequente, \(\psi^{m+1}\), é obtido a partir dos valores conhecidos na posição anterior, \(\psi^m\). Este processo caracteriza o método como um <strong>problema de marcha</strong> (<em>marching algorithm</em>).
 </p>
 
 <p>
-    Ou seja, a simulação funciona como um problema de marcha: avançamos no eixo \(r\), calculando a solução em cada nova posição a partir dos valores discretizados no eixo vertical \(z\).
+    Na prática, a simulação avança incrementalmente ao longo do eixo do alcance (\(r\)). Para cada passo em \(r\), a solução é computada simultaneamente para todo o domínio vertical, utilizando os valores discretizados no eixo da profundidade (\(z\)).
 </p>
 
 <p>
-    Além disso, a condição que determina o feixe lançado inicialmente pode funcionar com modelos distintos. Usaremos 3 fontes: Gaussiana, Greene e Gaussiana Generalizada. Para detalhes da derivação de cada, veja [2]
+    A condição de contorno em \(r=0\), que determina o perfil do feixe lançado inicialmente, pode ser modelada por diferentes distribuições. Nesta implementação, foram disponibilizados três modelos de fonte: <strong>Gaussiana</strong>, <strong>Greene</strong> e <strong>Gaussiana Generalizada</strong>. Para detalhes sobre as derivações analíticas de cada perfil, recomenda-se a consulta em [2].
 </p>
+
+<p>Abaixo, segue a simulação implementada:</p>
  <h2>Simulação PE: Propagação Acústica</h2>
     <div class="controls">
        
@@ -513,7 +515,18 @@
         Simulação 5
     </p>
 <p>
-    Por fim, também fizemos uma simulação de Divisão de Feixe, dado em 6.9.1.1 em [2]. 
+    Por fim, também fizemos uma simulação de Propagação e Divisão de Feixes Acústicos (Beam Splitting), dado em 6.9.1.1 em [2]. 
+
+        <p>Quando um feixe colimado (como a fonte Gaussiana de 100 Hz mencionada) atinge a interface entre a água e o fundo marinho, ocorre a divisão da energia.
+            
+
+  Parte da energia é refletida de volta para a coluna de água, enquanto outra parte é transmitida para o sedimento ou penetra no fundo. A imagem mostra claramente a formação de "lóbulos" de interferência resultantes da superposição entre a onda incidente e a onda refletida.
+    </p>
+
+        <p style="font-size: 0.9em; color: #7f8c8d; margin-top: 30px;">
+            <em>Fonte: Baseado no exemplo numérico de acústica computacional (Capítulo 6.9 [2]).</em>
+        </p>
+
     <p style="text-align: center"><img src="image.png" width="80%" height="80%">
         Simulação de feixe inclinado [2] 
     </p>
@@ -567,9 +580,11 @@
     <p>[1] R.H. Hardin, F.D. Tappert, Applications of the split-step Fourier method to the numerical so-
 lution of nonlinear and variable coefficient wave equations. SIAM Rev. 15, 423 (1973) </p>
     <p>[2] Jensen, F. B., Kuperman, W. A., Porter, M. B., & Schmidt, H. (2011). Computational Ocean Acoustics. In Modern Acoustics and Signal Processing. </p>
-    <p>Foi utilida IA para auxilio em algumas partes do código.</p>
+    <p>Os códigos em java script foram feitos com o auxilio de IA</p>
     <p>O estilo do texto seguiu o design que pode ser obtido em https://latex.vercel.app/</p>
     <p>O style em head segue, majoritariamente, do material da Semana 01 - JS dos monitores.</p>
+    <p>Agradecimentos aos monitores pelo direcionamento e orientação com o código</p>
+    <p>No <a href="https://github.com/fr-jose/Acusticsound-simulation/tree/main">Github</a> encontram-se todas as versões anteriores de códigos e testes feitos ate chegar a versão final</p>
     <script src="simulacao.js"></script>
     <script src="simulacao2.js"></script>
 
