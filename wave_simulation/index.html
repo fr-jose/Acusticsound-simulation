@@ -6,7 +6,7 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <html lang="pt-br">
 
-    <title>Curvas de Bezier</title>
+    <title>Underwater wave simulator</title>
     <style>
         body { background: #03022d; display: flex; align-items: left; height: 100vh; color: white; font-family: sans-serif; flex-direction: column; }
         canvas { border: 2px solid #514747; background: #000; }
@@ -425,7 +425,6 @@
     Além disso, a condição que determina o feixe lançado inicialmente pode funcionar com modelos distintos. Usaremos 3 fontes: Gaussiana, Greene e Gaussiana Generalizada. Para detalhes da derivação de cada, veja [2]
 </p>
  <h2>Simulação PE: Propagação Acústica</h2>
-   
     <div class="controls">
        
         <div class="section-title">Parâmetros da Fonte Acústica</div>
@@ -493,9 +492,26 @@
    
     <div id="status">Pronto para simular.</div>
 
-    <!-- Simulação 1 -->
-    <div class="svg-expandido"><object id="transformations1" data="transformations1.svg" type="image/svg+xml"> </object></div>
     
+    <p>
+        Como resultado das simulações, obtivemos as imagens abaixo:
+    </p>
+
+    <p style="text-align: center"><img src="imagem1.png" width="80%" height="80%">
+        Simulação 1 
+    </p>
+    <p style="text-align: center"><img src="imagem2.png" width="80%" height="80%">
+        Simulação 2 
+    </p>
+    <p style="text-align: center"><img src="imagem3.png" width="80%" height="80%">
+        Simulação 3
+    </p>
+    <p style="text-align: center"><img src="imagem5.png" width="80%" height="80%">
+        Simulação 4
+    </p>
+    <p style="text-align: center"><img src="imagem4.png" width="80%" height="80%">
+        Simulação 5
+    </p>
 <p>
     Por fim, também fizemos uma simulação de Divisão de Feixe, dado em 6.9.1.1 em [2]. 
     <p style="text-align: center"><img src="image.png" width="80%" height="80%">
