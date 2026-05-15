@@ -8,7 +8,7 @@
 
     <title>Curvas de Bezier</title>
     <style>
-        body { background: #0f5e7b; display: flex; align-items: left; height: 100vh; color: white; font-family: sans-serif; flex-direction: column; }
+        body { background: #03022d; display: flex; align-items: left; height: 100vh; color: white; font-family: sans-serif; flex-direction: column; }
         canvas { border: 2px solid #514747; background: #000; }
         p { margin-top: 30px; }
         img {
@@ -28,6 +28,150 @@
             height: auto;
             object-fit: contain;
         }
+
+
+   
+        .controls {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 850px;
+            box-sizing: border-box;
+            border: 1px solid #333;
+        }
+        .section-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #03dac6;
+            margin-bottom: -10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .control-group label { font-size: 13px; font-weight: bold; color: #aaa; }
+        input[type="number"] {
+            width: 70px;
+            padding: 6px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #2c2c2c;
+            color: #fff;
+            font-weight: bold;
+        }
+        button.simular-btn {
+            background-color: #bb86fc;
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 5px;
+            transition: 0.2s;
+        }
+        button.simular-btn:hover { background-color: #a370f7; }
+        button:disabled { background-color: #555 !important; cursor: not-allowed; color: #888; }
+       
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        canvas {
+            background-color: #000;
+            border: 1px solid #444;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.8);
+            display: block;
+        }
+       
+        /* Estilo da Bolinha Arrastável */
+        #source-dot1 {
+            position: absolute;
+            left: 0;
+            width: 16px;
+            height: 16px;
+            background-color: #03dac6;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: ns-resize;
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(3, 218, 198, 0.8);
+            transition: transform 0.1s;
+        }
+        #source-dot1:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+            background-color: #fff;
+        }
+
+        #status-bar {
+            width: 850px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        #status-text { color: #03dac6; }
+        #progress-bar { width: 300px; height: 10px; background: #333; border-radius: 5px; overflow: hidden; display: none; }
+        #progress-fill { height: 100%; width: 0%; background: #bb86fc; }
+
+        .x-label { text-align: center; margin-top: 10px; font-size: 14px; color: #aaa; }
+        .y-label {
+            position: absolute;
+            left: -160px;
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        /* Estilo da Bolinha Arrastável */
+        #source-dot2 {
+            position: absolute;
+            left: 0;
+            width: 16px;
+            height: 16px;
+            background-color: #ff3333;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: ns-resize;
+            z-index: 10;
+            box-shadow: 0 0 8px rgba(255,0,0,0.8);
+        }
+        #source-dot2:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        #status {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .x-label { text-align: center; margin-top: 5px; font-size: 14px; }
+        .y-label {
+            position: absolute;
+            left: -140px;
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            font-size: 14px;
+        }
+        .hidden { display: none !important; }
         
     </style>
 </head>
@@ -292,7 +436,112 @@
     Nesse modelo, a velocidade do som aumenta com a profundidade, logo temos a tendência a subir. No modelo, o feixe aponta aproximadamente 5.28\( ^o \) para baixo, que é o ângulo mínimo para a a luz tocar o fundo.
     Alguns parametros podem ser ajustas na simulação abaixo.
 </p>
+
+    <h2>Simulação PE-IFD: Beam Splitting</h2>
+   
+    <div class="controls">
+        <div class="section-title">Fonte Acústica</div>
+        <div class="control-group">
+            <label>Frequência (Hz):</label> <input type="number" id="s1_f" value="100" step="10">
+            <label>Prof. zs (m):</label> <input type="number" id="s1_zs" value="-400" step="10" oninput="atualizarPosicaoBolinha()">
+            <label>Inclinação θ (°):</label> <input type="number" id="s1_theta" value="5.28" step="0.1">
+            <label>Largura W (m):</label> <input type="number" id="s1_W" value="100" step="10">
+        </div>
+
+        <div class="section-title">Ambiente (Sedimento)</div>
+        <div class="control-group">
+            <label>Velocidade (m/s):</label> <input type="number" id="s1_c_sed" value="1655" step="5">
+            <label>Densidade (kg/m³):</label> <input type="number" id="s1_rho_sed" value="1500" step="50">
+        </div>
+       
+        <button id="btn-simular" class="simular-btn" onclick="iniciarSimulacao1()">Sempre que mudar valores no painel, mova a bolinha para visualizar a simulação</button>
+    </div>
+
+    <div class="canvas-wrapper">
+        <div class="y-label">Profundidade (m)<br>-800 a 200</div>
+       
+        <div id="source-dot1" title="Arraste para mudar a profundidade da fonte"></div>
+       
+        <canvas id="simCanvas1" width="800" height="400"></canvas>
+        <div class="x-label">Alcance Range (km) <br>0 a 10 km</div>
+    </div>
+   
+    <div id="status-bar">
+        <span id="status-text">Aguardando...</span>
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+    </div>
+
     <!-- Simulação 2 --> 
+ <h2>Simulação PE: Propagação Acústica</h2>
+   
+    <div class="controls">
+       
+        <div class="section-title">Parâmetros da Fonte Acústica</div>
+        <div class="control-group">
+            <label>Tipo de Feixe:</label>
+            <label><input type="radio" name="tipo_feixe" value="gaussian" onchange="atualizarInputs()"> Gaussian</label>
+            <label><input type="radio" name="tipo_feixe" value="greene" onchange="atualizarInputs()"> Greene</label>
+            <label><input type="radio" name="tipo_feixe" value="generalized" checked onchange="atualizarInputs()"> Generalized</label>
+        </div>
+
+        <div class="control-group">
+            <label>Prof. da Fonte zs (m):</label>
+            <input type="number" id="inp_zs" value="400" min="0" max="800" step="10" oninput="atualizarPosicaoBolinha()">
+
+            <div id="div_gaussian" class="control-group hidden">
+                <label title="Largura W (m)">Largura W (m):</label>
+                <input type="number" id="inp_W" value="10" min="1" max="100" step="5">
+                <label title="Inclinação do feixe gaussiano">Inclinação (°):</label>
+                <input type="number" id="inp_gauss_tilt" value="0" min="-30" max="30" step="1">
+            </div>
+
+            <div id="div_greene" class="control-group hidden">
+                <label title="Fator que altera a dispersão da fonte Greene (Padrão: 3.05)">Fator de Abertura:</label>
+                <input type="number" id="inp_greene_w" value="3.05" min="0.1" max="20" step="0.1">
+            </div>
+
+            <div id="div_generalized" class="control-group">
+                <label>Abertura θ₁ (°):</label>
+                <input type="number" id="inp_theta1" value="10" min="1" max="30" step="1">
+                <label>Inclinação θ₂ (°):</label>
+                <input type="number" id="inp_theta2" value="15" min="-30" max="30" step="1">
+            </div>
+        </div>
+
+        <div class="section-title">Configurações do Fundo (Meio Diferente)</div>
+        <div class="control-group">
+            <label title="Distância em que o fundo começa a subir">Início da Rampa (m):</label>
+            <input type="number" id="inp_rampa_inicio" value="1200" min="0" max="5000" step="100">
+           
+            <label title="Metros que o fundo sobe a cada passo dr (20m)">Taxa de Subida (m/dr):</label>
+            <input type="number" id="inp_rampa_taxa" value="3.5" min="-50" max="50" step="0.5">
+
+            <label title="Profundidade em que a rampa para de subir/descer">Prof. Limite/Mínima (m):</label>
+            <input type="number" id="inp_prof_min" value="250" min="0" max="800" step="10">
+        </div>
+        <div class="control-group">
+            <label title="Velocidade do som no fundo (define a refração)">Velocidade no Fundo (m/s):</label>
+            <input type="number" id="inp_c_fundo" value="1579" min="1000" max="3000" step="1">
+
+            <label title="Parte imaginária do índice de refração (atenuação)">Absorção no Fundo:</label>
+            <input type="number" id="inp_abs_fundo" value="0.05" min="0" max="1" step="0.01">
+        </div>
+       
+        <button class="simular-btn" onclick="iniciarSimulacao2()">Sempre que mudar valores no painel, mova a bolinha para visualizar a simulação</button>
+    </div>
+
+    <div class="canvas-wrapper">
+        <div class="y-label">Profundidade z (m)</div>
+       
+        <div id="source-dot2" title="Arraste para mudar a profundidade da fonte"></div>
+       
+        <canvas id="simCanvas2" width="800" height="400"></canvas>
+        <div class="x-label">Distância r (m)</div>
+    </div>
+   
+    <div id="status">Pronto para simular.</div>
+
+
     <h2>Autores</h1>
     <p>
         Francisco José e Maria Eduarda Martins, IMPA Tech.
@@ -304,6 +553,8 @@ lution of nonlinear and variable coefficient wave equations. SIAM Rev. 15, 423 (
     <p>Foi utilida IA para auxilio em algumas partes do código.</p>
     <p>O estilo do texto seguiu o design que pode ser obtido em https://latex.vercel.app/</p>
     <p>O style em head segue, majoritariamente, do material da Semana 01 - JS dos monitores.</p>
-    <script src="script.js"></script>
+    <script src="simulacao.js"></script>
+    <script src="simulacao2.js"></script>
+
 </body>
 </html>

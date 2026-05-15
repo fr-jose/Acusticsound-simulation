@@ -1,0 +1,329 @@
+(function () {
+
+// --- 0. Lógica de Arrastar a Bolinha (Drag & Drop) ---
+const bolinha = document.getElementById('source-dot2');
+const canvas = document.getElementById('simCanvas2');
+let arrastando = false;
+
+function atualizarPosicaoBolinha() {
+    let zs = parseFloat(document.getElementById('inp_zs').value);
+    if(isNaN(zs)) return;
+    if (zs < 0) zs = 0;
+    if (zs > Profundidade) zs = Profundidade;
+   
+    const yPx = (zs / Profundidade) * canvas.height;
+    bolinha.style.top = yPx + 'px';
+}
+
+bolinha.addEventListener('mousedown', (e) => {
+    arrastando = true;
+    e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!arrastando) return;
+    const rect = canvas.getBoundingClientRect();
+    let y = e.clientY - rect.top;
+   
+    if (y < 0) y = 0;
+    if (y > rect.height) y = rect.height;
+   
+    bolinha.style.top = y + 'px';
+    const novoZs = (y / rect.height) * Profundidade;
+    document.getElementById('inp_zs').value = Math.round(novoZs);
+});
+
+document.addEventListener('mouseup', () => {
+    if (arrastando) {
+        arrastando = false;
+        iniciarSimulacao2();
+    }
+});
+
+// --- 1. Classe Auxiliar para Números Complexos ---
+class Complex {
+    constructor(r, i = 0) { this.r = r; this.i = i; }
+    add(c) { return new Complex(this.r + c.r, this.i + c.i); }
+    sub(c) { return new Complex(this.r - c.r, this.i - c.i); }
+    mul(c) { return new Complex(this.r * c.r - this.i * c.i, this.r * c.i + this.i * c.r); }
+    div(c) {
+        let den = c.r * c.r + c.i * c.i;
+        return new Complex((this.r * c.r + this.i * c.i) / den, (this.i * c.r - this.r * c.i) / den);
+    }
+    scale(s) { return new Complex(this.r * s, this.i * s); }
+    abs() { return Math.sqrt(this.r * this.r + this.i * this.i); }
+    static exp(r, i) {
+        let e = Math.exp(r);
+        return new Complex(e * Math.cos(i), e * Math.sin(i));
+    }
+}
+
+function spsolve_tdma(a, b, c, d) {
+    let n = d.length;
+    let c_prime = new Array(n);
+    let d_prime = new Array(n);
+    let x = new Array(n);
+
+    c_prime[0] = c[0].div(b[0]);
+    d_prime[0] = d[0].div(b[0]);
+
+    for (let i = 1; i < n; i++) {
+        let m = b[i].sub(a[i].mul(c_prime[i - 1]));
+        if (i < n - 1) c_prime[i] = c[i].div(m);
+        d_prime[i] = d[i].sub(a[i].mul(d_prime[i - 1])).div(m);
+    }
+
+    x[n - 1] = d_prime[n - 1];
+    for (let i = n - 2; i >= 0; i--) {
+        x[i] = d_prime[i].sub(c_prime[i].mul(x[i + 1]));
+    }
+    return x;
+}
+
+// --- 2. Configurações Globais ---
+const Profundidade = 800;
+const Distancia = 5000;
+const dz = 1;
+const dr = 20;
+const f = 100;
+const c0 = 1500;
+const k0 = 2 * Math.PI * f / c0;
+
+const Nz = Math.floor(Profundidade / dz) + 1;
+const Nr = Math.floor(Distancia / dr) + 1;
+
+// Coeficientes de Greene
+const a0 = 0.99987, a1 = 0.79624, b0 = 1.0, b1 = 0.30102;
+const term_w1 = (k0 * dr / 2) * (a0 - b0);
+const term_w2 = (k0 * dr / 2) * (a1 - b1);
+const w1 = new Complex(b0, term_w1);
+const w1_star = new Complex(b0, -term_w1);
+const w2 = new Complex(b1, term_w2);
+const w2_star = new Complex(b1, -term_w2);
+
+let U_final;
+let fundo_perfil;
+
+// --- 3. Lógica da Interface e Limites ---
+function limitarInputs() {
+    // Garante que o usuário não coloque valores impossíveis via teclado
+    const clamp = (id, min, max) => {
+        let el = document.getElementById(id);
+        let val = parseFloat(el.value);
+        if (isNaN(val)) return;
+        if (val < min) el.value = min;
+        if (val > max) el.value = max;
+    };
+
+    clamp('inp_zs', 0, Profundidade);
+    clamp('inp_rampa_inicio', 0, Distancia);
+    clamp('inp_prof_min', 0, Profundidade);
+    clamp('inp_W', 1, 100); // Limite máximo para a largura da Gaussiana ajustado para 100
+    clamp('inp_gauss_tilt', -30, 30);
+    clamp('inp_greene_w', 0.1, 50);
+    clamp('inp_theta1', 1, 30);
+    clamp('inp_theta2', -30, 30);
+    clamp('inp_c_fundo', 100, 5000);
+    clamp('inp_abs_fundo', 0, 10);
+}
+
+function atualizarInputs() {
+    const tipo = document.querySelector('input[name="tipo_feixe"]:checked').value;
+    document.getElementById('div_gaussian').classList.add('hidden');
+    document.getElementById('div_greene').classList.add('hidden');
+    document.getElementById('div_generalized').classList.add('hidden');
+
+    if (tipo === 'gaussian') {
+        document.getElementById('div_gaussian').classList.remove('hidden');
+    } else if (tipo === 'greene') {
+        document.getElementById('div_greene').classList.remove('hidden');
+    } else if (tipo === 'generalized') {
+        document.getElementById('div_generalized').classList.remove('hidden');
+    }
+}
+
+function gerar_fonte(tipo, zs) {
+    let psi = new Array(Nz);
+    for (let i = 0; i < Nz; i++) {
+        let z = i * dz;
+       
+        if (tipo === 'gaussian') {
+            let W = parseFloat(document.getElementById('inp_W').value);
+            let tilt = parseFloat(document.getElementById('inp_gauss_tilt').value) * Math.PI / 180;
+            let real_part = -Math.pow(z - zs, 2) / Math.pow(W, 2);
+            let imag_part = k0 * (z - zs) * Math.sin(tilt);
+            psi[i] = Complex.exp(real_part, imag_part);
+           
+        } else if (tipo === 'greene') {
+            let greene_w = parseFloat(document.getElementById('inp_greene_w').value);
+            let term1 = 1.4467 - 0.4201 * k0 * k0 * Math.pow(z - zs, 2);
+            let term2 = Math.exp(-(k0 * k0 * Math.pow(z - zs, 2)) / greene_w);
+            let amp = Math.sqrt(k0) * term1 * term2;
+            psi[i] = new Complex(amp, 0);
+           
+        } else if (tipo === 'generalized') {
+            let theta_1 = parseFloat(document.getElementById('inp_theta1').value);
+            let theta_2 = parseFloat(document.getElementById('inp_theta2').value);
+            let th1_rad = theta_1 * Math.PI / 180;
+            let th2_rad = theta_2 * Math.PI / 180;
+            let amp = Math.sqrt(k0) * Math.tan(th1_rad);
+            let real_part = -(k0 * k0 / 2) * Math.pow(z - zs, 2) * Math.pow(Math.tan(th1_rad), 2);
+            let imag_part = k0 * (z - zs) * Math.sin(th2_rad);
+            psi[i] = Complex.exp(real_part, imag_part).scale(amp);
+        }
+    }
+    return psi;
+}
+
+// --- 4. Simulação ---
+function iniciarSimulacao2() {
+    limitarInputs(); // Aplica os limites físicos antes de simular
+    atualizarPosicaoBolinha(); // Atualiza a bolinha visual caso o input zs tenha mudado ou sido corrigido
+
+    document.getElementById('status').innerText = "Calculando propagação... Aguarde.";
+    document.getElementById('status').style.color = "#ff9800";
+   
+    const tipo = document.querySelector('input[name="tipo_feixe"]:checked').value;
+    const zs = parseFloat(document.getElementById('inp_zs').value);
+
+    const inicio_rampa_m = parseFloat(document.getElementById('inp_rampa_inicio').value);
+    const taxa_subida = parseFloat(document.getElementById('inp_rampa_taxa').value);
+    const prof_min = parseFloat(document.getElementById('inp_prof_min').value);
+   
+    const c_fundo = parseFloat(document.getElementById('inp_c_fundo').value);
+    const abs_fundo = parseFloat(document.getElementById('inp_abs_fundo').value);
+   
+    const n_real_fundo = c0 / c_fundo;
+    const n_complex_fundo = new Complex(n_real_fundo, abs_fundo);
+
+    setTimeout(() => {
+        let psi = gerar_fonte(tipo, zs);
+       
+        U_final = new Array(Nr).fill(0).map(() => new Float32Array(Nz));
+        fundo_perfil = new Float32Array(Nr);
+
+        for(let i=0; i<Nz; i++) {
+            U_final[0][i] = 20 * Math.log10(psi[i].abs() + 1e-10);
+        }
+
+        const comum = (k0 * k0 * dz * dz) / 2;
+        const w1_ratio = w1_star.div(w2_star);
+        const w2_ratio = w1.div(w2);
+        const w2_w2star = w2.div(w2_star);
+       
+        const inicio_rampa_idx = inicio_rampa_m / dr;
+
+        for (let m = 0; m < Nr - 1; m++) {
+            let prof_fundo = m > inicio_rampa_idx ? Profundidade - (m - inicio_rampa_idx) * taxa_subida : Profundidade;
+            prof_fundo = Math.max(prof_fundo, prof_min);
+            fundo_perfil[m] = prof_fundo;
+
+            let a_diag = new Array(Nz).fill(new Complex(1, 0));
+            let c_diag = new Array(Nz).fill(new Complex(1, 0));
+            let b_diag = new Array(Nz);                        
+            let rhs = new Array(Nz);                            
+
+            for (let i = 0; i < Nz; i++) {
+                let z_val = i * dz;
+                let n_atual = (z_val < prof_fundo) ? new Complex(1.0, 0) : n_complex_fundo;
+                let n2_minus_1 = n_atual.mul(n_atual).sub(new Complex(1, 0));
+
+                let termL1 = w1_ratio.scale(comum).sub(new Complex(1, 0)).scale(2);
+                let termL2 = n2_minus_1.scale(2 * comum);
+                b_diag[i] = termL1.add(termL2);
+
+                let termR1 = w2_ratio.scale(comum).sub(new Complex(1, 0)).scale(2);
+                let u_hat_i = termR1.add(termL2);
+
+                let R_psi = new Complex(0, 0);
+                if (i > 0) R_psi = R_psi.add(psi[i - 1]);
+                R_psi = R_psi.add(u_hat_i.mul(psi[i]));
+                if (i < Nz - 1) R_psi = R_psi.add(psi[i + 1]);
+
+                rhs[i] = w2_w2star.mul(R_psi);
+            }
+
+            psi = spsolve_tdma(a_diag, b_diag, c_diag, rhs);
+
+            for (let i = 0; i < Nz; i++) {
+                U_final[m + 1][i] = 20 * Math.log10(psi[i].abs() + 1e-10);
+            }
+        }
+       
+        fundo_perfil[Nr - 1] = Math.max(Profundidade - (Nr - 1 - inicio_rampa_idx) * taxa_subida, prof_min);
+
+        let max_val = -Infinity;
+        for (let m = 0; m < Nr; m++) {
+            for (let i = 0; i < Nz; i++) {
+                if (U_final[m][i] > max_val) max_val = U_final[m][i];
+            }
+        }
+        for (let m = 0; m < Nr; m++) {
+            for (let i = 0; i < Nz; i++) {
+                U_final[m][i] -= max_val;
+            }
+        }
+
+        desenharSimulacao();
+
+    }, 50);
+}
+
+// --- 5. Visualização ---
+function jetColor(v) {
+    v = Math.max(0, Math.min(1, v));
+    let r = Math.max(0, Math.min(1, 1.5 - Math.abs(4 * v - 3)));
+    let g = Math.max(0, Math.min(1, 1.5 - Math.abs(4 * v - 2)));
+    let b = Math.max(0, Math.min(1, 1.5 - Math.abs(4 * v - 1)));
+    return `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`;
+}
+
+function desenharSimulacao() {
+    document.getElementById('status').innerText = "Renderizando gráfico...";
+   
+    setTimeout(() => {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+
+        ctx.clearRect(0, 0, w, h);
+
+        const rect_w = w / Nr;
+        const rect_h = h / Nz;
+
+        for (let m = 0; m < Nr; m++) {
+            for (let i = 0; i < Nz; i++) {
+                let db = U_final[m][i];
+                let norm = (db + 35) / 35; // limites vmin=-35, vmax=0
+               
+                ctx.fillStyle = jetColor(norm);
+                ctx.fillRect(m * rect_w, i * rect_h, rect_w + 0.5, rect_h + 0.5);
+            }
+        }
+
+        // Perfil do Fundo
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        for (let m = 0; m < Nr; m++) {
+            let x = m * rect_w;
+            let y = (fundo_perfil[m] / Profundidade) * h;
+            if (m === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        document.getElementById('status').innerText = "Pronto! Simulação concluída.";
+        document.getElementById('status').style.color = "#4CAF50";
+    }, 50);
+}
+
+window.onload = () => {
+    atualizarInputs();
+    atualizarPosicaoBolinha();
+    iniciarSimulacao2();
+};
+
+
+})();
